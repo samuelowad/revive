@@ -1,0 +1,8 @@
+{
+  "command": "go run ./test-data/test.go",
+  "ignoreDirectories": ["vendor", "tmp"],
+  "monitorFileExt": [".go", ".html", ".css", ".js", ".json"],
+  "ignoreFileNameEndsWith": ["_test.go"],
+  "restartDelaySeconds": 3,
+  "verbosityLevel": 2
+}

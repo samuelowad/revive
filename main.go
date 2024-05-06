@@ -1,28 +1,26 @@
 package main
 
 import (
+	"github.com/samuelowad/gorevive/config"
 	"log"
 	"os"
 	"os/exec"
 	"path/filepath"
 	"strings"
+	"sync"
 	"syscall"
+	"time"
 
 	"github.com/fsnotify/fsnotify"
 )
 
 var (
-	commandName string
-	commandArgs []string
-	appCmd      *exec.Cmd
+	appCmd *exec.Cmd
+	mutex  sync.Mutex
 )
 
 func main() {
-	if len(os.Args) < 2 {
-		log.Fatal("Usage: GoRevive <command> [arguments...]")
-	}
-	commandName = os.Args[1]
-	commandArgs = os.Args[2:]
+	config.ReadConfig()
 
 	watcher, err := fsnotify.NewWatcher()
 	if err != nil {
@@ -34,15 +32,15 @@ func main() {
 		log.Fatalf("Failed to start the command: %v", err)
 	}
 
-	go watchFiles(watcher)
-
-	done := make(chan bool)
-	<-done
+	if err := watchFiles(watcher); err != nil {
+		log.Fatalf("Error watching files: %v", err)
+	}
 }
 
 func startCommand() error {
 	log.Println("Starting the command...")
-	appCmd = exec.Command(commandName, commandArgs...)
+	command := strings.Fields(config.Config.Command)
+	appCmd = exec.Command(command[0], command[1:]...)
 	appCmd.Stdout = os.Stdout
 	appCmd.Stderr = os.Stderr
 	return appCmd.Start()
@@ -50,18 +48,26 @@ func startCommand() error {
 
 func restartCommand() error {
 	log.Println("Restarting the command...")
-	err := appCmd.Process.Signal(syscall.SIGTERM)
-	if err != nil {
-		return err
+	mutex.Lock()
+	defer mutex.Unlock()
+
+	if appCmd != nil && appCmd.Process != nil {
+		if err := appCmd.Process.Signal(syscall.SIGTERM); err != nil {
+			return err
+		}
+		if err := appCmd.Wait(); err != nil && !strings.Contains(err.Error(), "signal: terminated") {
+			return err
+		}
 	}
-	err = appCmd.Wait()
-	if err != nil && !strings.Contains(err.Error(), "signal: terminated") {
-		return err
+
+	if config.Config.RestartDelaySeconds > 0 {
+		time.Sleep(time.Duration(config.Config.RestartDelaySeconds) * time.Second)
 	}
+
 	return startCommand()
 }
 
-func watchFiles(watcher *fsnotify.Watcher) {
+func watchFiles(watcher *fsnotify.Watcher) error {
 	err := filepath.Walk(".", func(path string, info os.FileInfo, err error) error {
 		if err != nil {
 			return err
@@ -72,19 +78,17 @@ func watchFiles(watcher *fsnotify.Watcher) {
 		return nil
 	})
 	if err != nil {
-		log.Fatal(err)
+		return err
 	}
 
 	for {
 		select {
 		case event := <-watcher.Events:
-			switch {
-			case event.Op&fsnotify.Write == fsnotify.Write:
-				handleEvent(event, "Modified")
-			case event.Op&fsnotify.Create == fsnotify.Create:
-				handleEvent(event, "Created")
-			case event.Op&fsnotify.Remove == fsnotify.Remove:
-				handleEvent(event, "Deleted")
+			if event.Op&fsnotify.Write == fsnotify.Write {
+				log.Printf("File %s: %s\n", actionName(event.Op), event.Name)
+				if shouldMonitorFile(event.Name) {
+					restartCommand()
+				}
 			}
 		case err := <-watcher.Errors:
 			log.Println("Error:", err)
@@ -92,9 +96,39 @@ func watchFiles(watcher *fsnotify.Watcher) {
 	}
 }
 
-func handleEvent(event fsnotify.Event, action string) {
-	if strings.HasSuffix(event.Name, ".go") {
-		log.Printf("File %s: %s\n", action, event.Name)
-		restartCommand()
+func shouldMonitorFile(filename string) bool {
+	dir := filepath.Dir(filename)
+	for _, ignoredDir := range config.Config.IgnoreDirectories {
+		if dir == ignoredDir {
+			return false
+		}
+	}
+
+	ext := filepath.Ext(filename)
+	for _, ignoredEnding := range config.Config.IgnoreFileNameEndsWith {
+		if strings.HasSuffix(filename, ignoredEnding) {
+			return false
+		}
+	}
+
+	for _, monitoredExt := range config.Config.MonitorFileExt {
+		if ext == monitoredExt {
+			return true
+		}
+	}
+
+	return false
+}
+
+func actionName(op fsnotify.Op) string {
+	switch {
+	case op&fsnotify.Write == fsnotify.Write:
+		return "Modified"
+	case op&fsnotify.Create == fsnotify.Create:
+		return "Created"
+	case op&fsnotify.Remove == fsnotify.Remove:
+		return "Deleted"
+	default:
+		return "Unknown"
 	}
 }

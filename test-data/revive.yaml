@@ -1,0 +1,10 @@
+command: go run main.go
+ignoreDirectories:
+  - vendor
+  - tmp
+monitorFileExt:
+  - .go
+restartDelaySeconds: 3
+verbosityLevel: 2
+ignoreFileNameEndsWith:
+  - _test.go
