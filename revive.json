@@ -1,5 +1,5 @@
 {
-  "command": "go run ./test-data/test.go",
+  "command": "node test-data/test.js",
   "ignoreDirectories": ["vendor", "tmp"],
   "monitorFileExt": [".go", ".html", ".css", ".js", ".json"],
   "ignoreFileNameEndsWith": ["_test.go"],

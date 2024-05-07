@@ -1,7 +1,7 @@
 package main
 
 import (
-	"github.com/samuelowad/gorevive/config"
+	"github.com/samuelowad/revive/config"
 	"log"
 	"os"
 	"os/exec"

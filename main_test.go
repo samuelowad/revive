@@ -10,7 +10,7 @@ import (
 	"time"
 )
 
-func TestGoRevive(t *testing.T) {
+func TestRevive(t *testing.T) {
 	// Create a temporary directory
 	tmpDir, err := ioutil.TempDir("", "test-data")
 	if err != nil {
@@ -25,8 +25,8 @@ func TestGoRevive(t *testing.T) {
 		t.Fatal("Failed to copy test.go:", err)
 	}
 
-	// Build GoRevive
-	if err := buildGoRevive(tmpDir); err != nil {
+	// Build Revive
+	if err := buildRevive(tmpDir); err != nil {
 		t.Fatal("Failed to build GoRevive:", err)
 	}
 
@@ -56,7 +56,7 @@ func TestGoRevive(t *testing.T) {
 	}
 }
 
-func buildGoRevive(tmpDir string) error {
+func buildRevive(tmpDir string) error {
 	cmd := exec.Command("go", "build", "-o", filepath.Join(tmpDir, "GoRevive"), "main.go")
 	err := cmd.Run()
 	if err != nil {

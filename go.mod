@@ -1,4 +1,4 @@
-module github.com/samuelowad/gorevive
+module github.com/samuelowad/revive
 
 go 1.19
 
