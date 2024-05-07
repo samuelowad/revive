@@ -1,18 +1,21 @@
 # Revive
 
-Revive is a tool for enabling hot reload in Go applications. It watches for file changes in the current directory and its subdirectories, and automatically restarts the application when any Go file is modified.
+Revive is a tool for enabling hot reload in applications just with a command definition. It watches for file changes in the current directory and its subdirectories, and automatically restarts the application when any Go file is modified.
+like nodemon written in JS.
 
 ## Installation
 
 Downloadable binary is not available yet, but you can clone the repository and build locally using the following command:
 
 ```sh
+## locally
 go build -o revive
 ```
 ### or
 
 ```sh
-go install -v github.com/samuelowad/revive
+## globally
+go install
 
 ```
 

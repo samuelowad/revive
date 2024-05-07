@@ -86,6 +86,4 @@ func ReadConfig() {
 		log.Fatal("Error parsing config file:", err)
 		return
 	}
-
-	fmt.Println("Config data:", *Config)
 }
